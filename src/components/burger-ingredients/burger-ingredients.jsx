@@ -1,15 +1,16 @@
-import React, { useState, useEffect, useRef, useContext } from "react";
-import PropTypes from "prop-types";
-import styles from "./burger-ingredients.module.css";
 import {
   Counter,
   CurrencyIcon,
   Tab,
 } from "@ya.praktikum/react-developer-burger-ui-components";
-import IngredientDetails from "../ingredient-details/ingredient-details";
-import Modal from "../modal/modal";
-import IngredientsContext from "../../contexts/ingredients-context";
+import PropTypes from "prop-types";
+import React, { useEffect, useRef, useState, useMemo } from "react";
+import { useDrag } from "react-dnd";
+import { useSelector } from "react-redux";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ProductItemType } from "../../utils/common-prop-types";
+import styles from "./burger-ingredients.module.css";
+import { INGREDIENT_ROUTE } from "../../const/routes";
 
 const ingredientTypesMap = {
   main: "Начинки",
@@ -21,11 +22,42 @@ const tabs = ["bun", "sauce", "main"].map((type) => ({
   title: ingredientTypesMap[type],
 }));
 
+// const ingredientsDataSelector = (state) => ({
+//   ingredients: state.ingredients.data,
+//   countsMap: state.cart.ingredients.reduce((map, { id }) => {
+//     map.set(id, (map.get(id) || 0) + 1);
+
+//     return map;
+//   }, new Map(state.cart.bun ? [[state.cart.bun, 2]] : [])),
+// });
+const ingredientsSelector = (state) => state.ingredients.data
+const bunIngredientSelector = (state) => state.cart.bun
+const orderIngredientsSelector = (state) => state.cart.ingredients
+
+
 export default function BurgerIngredients() {
   const [currentTab, setCurrentTab] = useState("bun");
   const [groupProducts, setGroupProducts] = useState([]);
-  const [productDetails, setProductDetails] = useState(null);
-  const ingredients = useContext(IngredientsContext);
+  const [thresholds, setThreshholds] = useState({});
+  // const { ingredients, countsMap } = useSelector(ingredientsDataSelector);
+  const scrollContainerRef = useRef();
+  const navigate = useNavigate();
+  let location = useLocation();
+
+
+  const ingredients = useSelector(ingredientsSelector);
+  const bunIngredient = useSelector(bunIngredientSelector);
+  const orderIngredients = useSelector(orderIngredientsSelector);
+
+  const countsMap = useMemo(() => {
+    const map = new Map(bunIngredient ? [[bunIngredient, 2]] : []);
+    
+    orderIngredients.forEach(({ id }) => {
+      map.set(id, (map.get(id) || 0) + 1)});
+
+    return map;
+  }, [orderIngredients, bunIngredient]);
+
 
   const categoriesRefs = {
     main: useRef(),
@@ -38,53 +70,94 @@ export default function BurgerIngredients() {
   }, [ingredients]);
 
   useEffect(() => {
-    categoriesRefs[currentTab]?.current?.scrollIntoView();
-  }, [currentTab]);
+    const keys = Object.keys(thresholds);
+    const closestTab =
+      keys.length &&
+      keys.reduce((max, key) =>
+        thresholds[key] > thresholds[max] ? key : max
+      );
+
+    if (closestTab) {
+      setCurrentTab(closestTab);
+    }
+  }, [thresholds]);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          setThreshholds((state) => ({
+            ...state,
+            [entry.target.dataset?.type]: entry.isIntersecting
+              ? entry.intersectionRatio
+              : 0,
+          }));
+        });
+      },
+      {
+        root: scrollContainerRef.current,
+        threshold: Array.from({ length: 10, value: null }).map(
+          (_, i) => (i + 1) / 10
+        ),
+      }
+    );
+
+    groupProducts.forEach((group) => {
+      if (categoriesRefs[group.type].current) {
+        observer.observe(categoriesRefs[group.type].current);
+      }
+    });
+
+    return () => {
+      observer.disconnect();
+    };
+  }, [groupProducts]);
 
   function onTabClick(currentTab) {
     setCurrentTab(currentTab);
+    categoriesRefs[currentTab]?.current?.scrollIntoView();
   }
 
   function onProductClick(ingredient) {
-    setProductDetails(ingredient);
+    navigate(`${INGREDIENT_ROUTE}/${ingredient._id}`, {
+      state: { backgroundLocation: location },
+    });
   }
 
   return (
     <div className={styles.wrapper}>
       <Tabs currentTab={currentTab} onChange={onTabClick} />
 
-      <div className={styles.categoriesList}>
+      <div className={styles.categoriesList} ref={scrollContainerRef}>
         {groupProducts.map(({ type, title, ingredients }) => (
-          <React.Fragment key={type}>
-            <h2 className={styles.title} ref={categoriesRefs[type]}>
-              {title}
-            </h2>
+          <div key={type} ref={categoriesRefs[type]} data-type={type}>
+            <h2 className={styles.title}>{title}</h2>
             <div className={styles.productList}>
               {ingredients.map((ingredient) => (
                 <React.Fragment key={ingredient._id}>
                   <ProductItem
-                    count={1}
+                    count={countsMap.get(ingredient._id)}
                     ingredient={ingredient}
                     onClick={() => onProductClick(ingredient)}
                   />
                 </React.Fragment>
               ))}
             </div>
-          </React.Fragment>
+          </div>
         ))}
       </div>
-      {productDetails && (
-        <Modal header="Детали ингредиента" onClose={() => onProductClick(null)}>
-          <IngredientDetails ingredient={productDetails} />
-        </Modal>
-      )}
     </div>
   );
 }
 
 const ProductItem = React.memo((props) => {
+  const [_, drag] = useDrag({
+    type: props.ingredient.type === "bun" ? "bun" : "ingredient",
+    item: props.ingredient,
+  });
+
   return (
-    <section className={styles.productItem} onClick={props.onClick}>
+    <section className={styles.productItem} onClick={props.onClick} ref={drag}>
       <div className={styles.productItemCount}>
         {props.count ? <Counter count={props.count} size="default" /> : null}
       </div>

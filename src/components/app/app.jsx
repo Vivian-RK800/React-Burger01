@@ -1,44 +1,101 @@
-import React, { useEffect, useState } from "react";
+import { useSelector } from "react-redux";
+
+import { Route, Routes, useLocation } from "react-router-dom";
+import BurgerIngredientModal from "../../pages/burger-ingredient/burger-ingredient-modal";
+import { ForgotPasswordPage } from "../../pages/forgot-password/forgot-password";
+import { HomePage } from "../../pages/home/home";
+import { LoginPage } from "../../pages/login/login";
+import { NotFoundPage } from "../../pages/not-found/not-found";
+import { ProfileDetailsPage } from "../../pages/profile/details/details";
+import { LogoutPage } from "../../pages/profile/logout/details";
+import { ProfileOrdersPage } from "../../pages/profile/orders/orders";
+import { ProfilePage } from "../../pages/profile/profile";
+import { RegisterPage } from "../../pages/register/register";
+import { ResetPasswordPage } from "../../pages/reset-password/reset-password";
 import AppHeader from "../app-header/app-header";
-import BurgerIngredients from "../burger-ingredients/burger-ingredients";
-import styles from "./app.module.css";
-import BurgerConstructor from "../burger-constructor/burger-constructor";
-import getIngredients from "../../api/get-ingredients";
 import ErrorBoundary from "../error-boundary/error-boundary";
-import IngredientsContext from "../../contexts/ingredients-context";
+import { ProtectedRouteElement } from "../protected/protected-route-element";
+import styles from "./app.module.css";
+import {
+  FORGOT_PASSWORD_ROUTE,
+  HOME_ROUTE,
+  INGREDIENT_ROUTE,
+  LOGIN_ROUTE,
+  PROFILE_LOGOUT_ROUTE,
+  PROFILE_ORDERS_ROUTE,
+  PROFILE_ROUTE,
+  REGISTER_ROUTE,
+  RESET_PASSWORD_ROUTE,
+} from "../../const/routes";
+import BurgerIngredientPage from "../../pages/burger-ingredient/burger-ingredient-page";
 
 export default function App() {
-  const [ingredients, setIngredients] = useState([]);
-  const [error, setError] = useState();
-
-  useEffect(() => {
-    getIngredients()
-      .then((data) => {
-        setIngredients(data);
-      })
-      .catch((err) => {
-        setError(err);
-      });
-  }, []);
+  const overlayError = useSelector((state) => state.error.overlayError);
+  const location = useLocation();
 
   return (
-    <ErrorBoundary error={error}>
-      <IngredientsContext.Provider value={ingredients}>
-        <div className={styles.wrapper}>
-          <AppHeader />
-          <main className={styles.container}>
-            <div className={styles.side}>
-              <h1 className="text text_type_main-large mt-10 mb-5">
-                Соберите бургер
-              </h1>
-              <BurgerIngredients />
-            </div>
-            <div className={styles.constructorContainer}>
-              <BurgerConstructor />
-            </div>
-          </main>
-        </div>
-      </IngredientsContext.Provider>
+    <ErrorBoundary error={overlayError}>
+      <div className={styles.wrapper}>
+        <AppHeader />
+        <Routes location={location.state?.backgroundLocation || location}>
+          <Route path={HOME_ROUTE} element={<HomePage />} />
+          <Route path={LOGIN_ROUTE} element={<LoginPage />} />
+          
+          <Route
+            path={REGISTER_ROUTE}
+            element={
+              <ProtectedRouteElement
+                element={<RegisterPage />}
+                authRestricted={true}
+              />
+            }
+          />
+          <Route
+            path={FORGOT_PASSWORD_ROUTE}
+            element={
+              <ProtectedRouteElement
+                element={<ForgotPasswordPage />}
+                authRestricted={true}
+              />
+            }
+          />
+          <Route
+            path={RESET_PASSWORD_ROUTE}
+            element={
+              <ProtectedRouteElement
+                element={<ResetPasswordPage />}
+                authRestricted={true}
+              />
+            }
+          />
+          <Route
+            path={PROFILE_ROUTE}
+            element={<ProtectedRouteElement element={<ProfilePage />} />}
+          >
+            <Route path="" element={<ProfileDetailsPage />} />
+            <Route
+              path={PROFILE_ORDERS_ROUTE}
+              element={<ProfileOrdersPage />}
+            />
+            <Route path={PROFILE_LOGOUT_ROUTE} element={<LogoutPage />} />
+          </Route>
+          {!location.state?.backgroundLocation && (
+            <Route
+              path={INGREDIENT_ROUTE + "/:productId"}
+              element={<BurgerIngredientPage />}
+            />
+          )}
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+        {location.state?.backgroundLocation && (
+          <Routes>
+            <Route
+              path={INGREDIENT_ROUTE + "/:productId"}
+              element={<BurgerIngredientModal />}
+            />
+          </Routes>
+        )}
+      </div>
     </ErrorBoundary>
   );
 }
