@@ -30,16 +30,10 @@
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
-    "cypress:open": "./node_modules/.bin/cypress open",
+    "cypress:open": "cypress open",
     "deploy": "gh-pages -d build",
-    "predeploy": "npm run build", 
+    "predeploy": "npm run build",
     "deploy-script": "npm run build && scp -r ./build/* vivi_sav@158.160.173.98:/home/vivi_sav/stellar-frontend"
-  },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "react-app/jest"
-    ]
   },
   "browserslist": {
     "production": [

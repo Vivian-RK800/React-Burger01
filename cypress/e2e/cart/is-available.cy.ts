@@ -1,4 +1,11 @@
-const BASE_URL = 'https://norma.nomoreparties.space/api/'
+const BASE_URL = '/api/';
+
+const SELECTORS = {
+  ingredientCart: "[class^=burger-constructor_item__]",
+  modalClose: "[class^=modal_close__]",
+  bunEmptyElement: "[class^=burger-constructor_bunEmptyElement__]",
+};
+
 describe("service is available", () => {
   beforeEach(() => {
     cy.intercept("GET", `${BASE_URL}ingredients`, {
@@ -29,7 +36,7 @@ describe("service is available", () => {
     cy.get("@details").eq(1).should("contain.text", "Белки, г42");
     cy.get("@details").eq(2).should("contain.text", "Жиры, г14,2");
     cy.get("@details").eq(3).should("contain.text", "Углеводы, г24,2");
-    cy.get("[class^=modal_close__]").click();
+    cy.get(SELECTORS.modalClose).click();
 
     cy.log("Add bun ingredient");
 
@@ -39,7 +46,7 @@ describe("service is available", () => {
 
     cy.get("@buns").first().as("bun").trigger("dragstart");
 
-    cy.get("[class^=burger-constructor_bunEmptyElement__]")
+    cy.get(SELECTORS.bunEmptyElement)
       .first()
       .as("bunEmpty");
 
@@ -71,7 +78,7 @@ describe("service is available", () => {
 
     cy.get("@ingredientEmpty").trigger("drop");
 
-    cy.get("[class^=burger-constructor_item__]").first().as("ingredientCart");
+    cy.get(SELECTORS.ingredientCart).first().as("ingredientCart");
 
     cy.get("@ingredientCart")
       .contains("Биокотлета из марсианской Магнолии")
@@ -87,7 +94,7 @@ describe("service is available", () => {
 
     cy.get("@ingredientCart").trigger("drop");
 
-    cy.get("[class^=burger-constructor_item__]")
+    cy.get(SELECTORS.ingredientCart)
       .eq(1)
       .as("ingredientCartSauce");
 
@@ -95,15 +102,15 @@ describe("service is available", () => {
 
     cy.log("Sort ingredients");
 
-    cy.get("[class^=burger-constructor_item__]")
+    cy.get(SELECTORS.ingredientCart)
       .first()
       .as("ingredientCartMain");
 
     cy.get("@ingredientCartMain").trigger("dragstart");
     cy.get("@ingredientCartSauce").trigger("drop");
 
-    cy.get("[class^=burger-constructor_item__]").eq(0).contains("Соус Spicy-X");
-    cy.get("[class^=burger-constructor_item__]")
+    cy.get(SELECTORS.ingredientCart).eq(0).contains("Соус Spicy-X");
+    cy.get(SELECTORS.ingredientCart)
       .eq(1)
       .contains("Биокотлета из марсианской Магнолии");
 
@@ -118,7 +125,7 @@ describe("service is available", () => {
 
     cy.log("Check ingredients");
 
-    cy.get("[class^=burger-constructor_item__]")
+    cy.get(SELECTORS.ingredientCart)
       .eq(0)
       .contains("Биокотлета из марсианской Магнолии");
 
@@ -149,10 +156,10 @@ describe("service is available", () => {
       fixture: "login",
     }).as("login");
 
-    cy.get("[class^=burger-constructor_item__]")
+    cy.get(SELECTORS.ingredientCart)
       .eq(0)
       .contains("Биокотлета из марсианской Магнолии");
-    cy.get("[class^=burger-constructor_item__]")
+    cy.get(SELECTORS.ingredientCart)
       .eq(1)
       .contains("Соус фирменный Space Sauce");
 
@@ -180,8 +187,8 @@ describe("service is available", () => {
 
     cy.log("Check cleared cart");
 
-    cy.get("[class^=modal_close__]").click();
-    cy.get("[class^=burger-constructor_bunEmptyElement__]").should(
+    cy.get(SELECTORS.modalClose).click();
+    cy.get(SELECTORS.bunEmptyElement).should(
       "be.visible"
     );
     cy.get("[class^=burger-constructor_itemEmpty__]").should("be.visible");
